@@ -3,6 +3,25 @@ import re
 
 # Note: unlike Part 1, Part 2 assumes 'symbol' is only '*'
 
+class ANumber:
+    def __init__(self, num, length, x, y):
+        self.num = num
+        self.length = length
+        self.x = x
+        self.y = y
+
+    def __eq__(self, other):
+        if isinstance(other, ANumber):
+            return (self.num, self.x, self.y) == (other.num, other.x, other.y)
+        return False
+
+    def __hash__(self):
+        # Ensure instances of ANumber are hashable
+        return hash((self.num, self.x, self.y))
+
+    def __str__(self):
+        return f"{self.num} @ ({self.x},{self.y})"
+
 max_dim = 140
 number_state = []
 symbol_state = []
@@ -19,18 +38,13 @@ def add_symbol_state(c, x, y):
     symbol_state.append({'x': x, 'y': y})
 
 def add_number_state(x, y, nbuffer):
-    result = {
-        'num': int(nbuffer),
-        'len': len(nbuffer),
-        'x': row,
-        'y': y
-    }
-    # print(f"Adding {result} to number state")
+    result = ANumber(int(nbuffer), len(nbuffer), row, y)
+    print(f"Adding {result} to number state")
     # Add number and its details to list of seen numbers
     number_state.append(result)
 
     # Also flag this number in the number map for each coordinate it appears on
-    for j in range(y, y+result['len'], 1):
+    for j in range(y, y+result.length, 1):
         # print(f"Adding {result} to ({x},{j})")
         number_map[x][j] = result
 
@@ -45,6 +59,7 @@ def parse_line(line, x):
     npos = None
     # Which coordinate does current character appear at
     y = 0
+
     # read each character in the line
     for c in line:
         if re.match(npat, c):
@@ -94,15 +109,8 @@ def is_symbol_adjacent(symbol):
                 continue
             n = number_map[i][j]
             print(f"({i},{j}) = {n}")
-            if not n == 0:
-                # Because we are just adding the number to the set, rather than
-                # full details, there is an edge case where if the same number
-                # was adjacent to a symbol in multiple coordinates, it would not
-                # calculate the multiple correctly. This could be fixed by properly
-                # representing a 'number' as a typed object with an equality check
-                # on the coordinates. But the puzzle input didn't have this edge
-                # case.
-                nfound.add(n['num'])
+            if isinstance(n, ANumber):
+                nfound.add(n)
 
     print(f"All found numbers for this symbol: {nfound}")
     if len(nfound) <= 1:
@@ -110,7 +118,7 @@ def is_symbol_adjacent(symbol):
     
     result = 1
     for n in nfound:
-        result *= n
+        result *= n.num
     return result
 
 # Read input lines until EOF (Ctrl+D)
