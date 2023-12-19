@@ -1,6 +1,26 @@
 import sys
 import re
 
+# For a given source, represents the destination mapping, and the length of the range of the mapping
+class MapRange:
+	def __init__(self, dest, rlength):
+		self.dest = dest
+		self.rlength = rlength
+
+	def __eq__(self, other):
+		if isinstance(other, MapRange):
+			return (self.dest, self.rlength) == (other.dest, other.rlength)
+		return False
+
+	def __hash__(self):
+		# Ensure instances of MapRange are hashable
+		return hash((self.dest, self.rlength))
+
+	def __str__(self):
+		return f"{self.dest} > {self.rlength})"
+
+
+
 seeds = set()
 
 seed_soil = {}
@@ -24,7 +44,7 @@ maps['humidity-to-location'] = humi_loca
 
 # Convert an array of strings to an array of numbers
 def to_number_set(arr):
-    return set([ int(x) for x in arr ])
+	return set([ int(x) for x in arr ])
 
 
 # Add mapping formula to destination array
@@ -32,18 +52,30 @@ def append_map(mapping, line):
 	# Format of line: destination, source, range length
 	parts = line.split(" ")
 	dest, src, rlength = [ int(x) for x in parts ]
-	for i in range(0, rlength):
-		mapping[src + i] = dest + i
-	#print(f"{line} added to map")
-	#print(f"New map: {mapping}")
+	mapping[src] = MapRange(dest, rlength)
 
 
 # Look up src in mapping. If not present return the src.
 def get_or_src(mapping, src):
-	dest = mapping.get(src)
-	if dest is None:
+	# Find the closest src key to what we're looking for
+	sorted_keys = sorted(mapping.keys())
+	closest_key = None
+	for k in sorted_keys:
+		if k <= src:
+			closest_key = k
+
+	if closest_key is None:
 		return src
-	return dest
+
+	# Get the MapRange object associated to the closest key
+	# Check that src falls between closest_key and rlength
+	mr = mapping.get(closest_key)
+	delta = src - closest_key
+	if delta < mr.rlength:
+		return mr.dest + delta
+
+	# Otherwise it was not mapped, so return src
+	return src
 
 
 # Plant a seed and see where it goes
